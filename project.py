@@ -4,59 +4,78 @@ import more_itertools as mit
 
 
 def main():
-	nPlayers = 4
-	skills = [1, 2, 2, 3] # higher number = faster reaction time
+	nPlayers = 2
+	reactionTimes = [1, 2, 2, 3] # higher number = faster reaction time
 	# nDecks = int((nPlayers / 4) + 1)
-	deck, nCards = getDeck()
+	deck = getDeck()
 	rd.shuffle(deck)
 	hands = deal(deck, nPlayers)
 
-	# nPlayers = len(hands)
-	winner = None
+
+	winner = -1
 	curPlayer = 0
 	pile = []
+	debt = -1
 
-	while(not winner): # each iteration of loop is one person's turn
+	while(winner < 0): # each iteration of loop is one person's turn
 		printgame(pile, hands, curPlayer)
 
 		# skip over players with empty hands
-		if (not hands[curPlayer]):
-			curPlayer += 1
-			curPlayer %= len(hands)
+		while hands[curPlayer] == []:
+			curPlayer = (curPlayer + 1) % len(hands)
 
 		# put down a card
 		topCard = hands[curPlayer].pop()
-		if not hands[curPlayer]:
-			hands.pop(curPlayer)
-
 		pile.append(topCard)
-
-		nTries = isFace(topCard)
-		if nTries >= 0:
-			faceCard(pile, hands, curPlayer)
-
+		
+		# check for slaps and winner
 		if checkSlap(pile):
 			taker = winSlap(len(hands))
 			hands[taker] = pile + hands[taker]
-			printgame(pile, hands, curPlayer)
 			pile.clear()
 			curPlayer = taker
-		printgame(pile, hands, curPlayer)
-
+			continue
 		winner = checkWinner(hands, nCards)
+		if winner >= 0:
+			return winner
 
-		if (ntries < 0): # normal mode
-			curPlayer += 1
-			curPlayer %= len(hands) # loop back to first player
-	# return winner
-	print()
+		# analyze card
+
+		cardCost = isFace(topCard)
+
+		print(debt)
+		# topCard is a facecard
+		if cardCost > 0: 
+			debt = cardCost
+			curPlayer = (curPlayer + 1) % len(hands)
+			continue
+
+		# topCard is a number
+
+		# normal mode, numbers
+		if (debt < 0): 
+			curPlayer = (curPlayer + 1) % len(hands)
+
+		# curPlayer still owes prevPlayer cards
+		if debt > 0:
+			debt -= 1
+			continue
+
+		if debt == 0:
+			taker = (curPlayer - 1) % len(hands)
+			hands[taker] = pile + hands[taker]
+			pile.clear()
+			curPlayer = taker
+			debt = -1
+			continue
+	# printgame(pile, hands, curPlayer)
 
 def getDeck(nDecks=1, jokers=False):
-	deck = ['A','2','3','4','5','6','7','8','9','10','J','Q','K']*4
+	deck = ['A','2','3','4','5','6','7','8','9','10','J','Q','K']*2
 	if jokers:
 		deck.append('J')
 		deck.append('J')
-	return (deck * nDecks, len(deck))
+	return deck * nDecks
 
 def deal(deck, nPlayers):
 	return [(list(p)) for p in mit.distribute(nPlayers, deck)]
@@ -66,13 +85,16 @@ def burn(deck, player):
 	if not hands[curPlayer]:
 		hands.pop(curPlayer)
 
-def checkWinner(hands, nCards):
-	for p in hands:
-		if int(len(p) is nCards):
-			return p
-	return None
+def incr(curPlayer, hands):
+	return (curPlayer + 1) % len(hands)
 
-def winSlap(nPlayers=4):
+def checkWinner(hands, nCards):
+	for i in range(len(hands)):
+		if int(len(hands[i]) is nCards):
+			return i
+	return -1
+
+def winSlap(reactionTimes, nPlayers=4):
 	taker = rd.randrange(nPlayers)
 	return taker
 
@@ -86,13 +108,7 @@ def checkSlap(pile, double=True, sandwich=True, topBottom=False,\
 	return False
 
 
-
 def isFace(topCard):
-	# return card == 'J' \
-	# 	or card == 'Q' \
-	# 	or card == 'K' \
-	# 	or card == 'A'
-
 	nTries = -1
 	if   topCard == 'J':
 		nTries = 1
@@ -103,48 +119,6 @@ def isFace(topCard):
 	elif topCard == 'A':
 		nTries = 4
 	return nTries
-
-def faceCard(pile, hands, curPlayer):
-	curPlayer += 1
-	curPlayer %= len(hands) # loop back to first player
-	if not pile:
-		return
-
-	nTries = -1
-	topCard = pile[-1]
-	if   topCard == 'J':
-		nTries = 1
-	elif topCard == 'Q':
-		nTries = 2
-	elif topCard == 'K':
-		nTries = 3
-	elif topCard == 'A':
-		nTries = 4
-	return nTries
-	for i in range(nTries):
-		# print(curPlayer)
-		if not hands[curPlayer]:
-			curPlayer = (curPlayer + 1) % len(hands)
-		card = hands[curPlayer].pop()
-		pile.append(card)
-
-
-		if checkSlap(pile):
-			taker = winSlap(len(hands))
-			hands[taker] = pile + hands[taker]
-			printgame(pile, hands, curPlayer)
-			pile.clear()
-			curPlayer = taker
-		printgame(pile, hands, curPlayer)
-
-
-
-		if isFace(card):
-			faceCard(pile, hands, curPlayer)
-		
-	taker = (curPlayer-1) % len(hands) # last player
-	hands[taker] = pile + hands[taker]
-	pile.clear()
 
 def printgame(pile, hands, curPlayer):
 	# print(curPlayer)
@@ -152,9 +126,5 @@ def printgame(pile, hands, curPlayer):
 	# print([str(h) + '\n' for h in hands])
 	for h in hands:
 		print(str(h))
-
-def play(hands, nCards, nPlayers):
-	
-	return
 
 main()
